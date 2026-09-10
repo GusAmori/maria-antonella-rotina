@@ -1,9 +1,14 @@
-# Maria Antonella - Rotina em Familia v2.0
+# Maria Antonella - Rotina em Familia v2.1
 
 Aplicativo PWA para celular, pensado para Mae e Pai registrarem e consultarem juntos a rotina da Maria Antonella.
 
 ## O que mudou nesta versao
 
+- Novo painel de **crescimento** com peso, altura/comprimento, idade cronologica e historico de medicoes.
+- Comparacao informativa com as curvas da **OMS para meninas de 0 a 24 meses**, usando P3, mediana e P97 para peso/idade e comprimento/idade.
+- Calculo de **idade de referencia aproximada** pelo peso e pela altura, comparando cada medida com a mediana mensal da OMS; isso nao representa idade biologica ou diagnostico.
+- Novo registro de **ocorrencias**, por exemplo: "Hoje a Antonella nao fez coco", febre, vomito, sono ou qualquer fato importante.
+- Peso e altura atuais tambem podem ser informados no perfil do bebe; ao mudar uma medida, o app cria uma nova linha no historico de crescimento.
 - Banco e autenticacao migrados de Firebase para **Supabase**.
 - Mesmo padrao usado no projeto da Clinica Dra. Isadora: `config.js`, Supabase Auth, chave publica no frontend e seguranca real por **Row Level Security (RLS)**.
 - Sincronizacao em tempo real entre os dois celulares com Supabase Realtime.
@@ -18,14 +23,15 @@ Aplicativo PWA para celular, pensado para Mae e Pai registrarem e consultarem ju
 - Criacao de conta com e-mail ou nome de usuario.
 - Perfis separados: Mae, Pai ou Responsavel.
 - Nome e foto de perfil editaveis.
-- Perfil da Maria Antonella com nome, foto e data de nascimento.
+- Perfil da Maria Antonella com nome, foto, data de nascimento, peso e altura/comprimento atuais.
 - Mamadeiras: horario, quantidade e tipo de leite.
 - Refeicoes: o que foi oferecido.
 - Rejeicoes: alimento/item recusado e reacao.
 - Consultas: profissional, local, data e hora.
 - Vacinas: nome, dose, data e hora.
 - Remedios: medicamento, dose, data e hora.
-- Banhos e observacoes.
+- Banhos, observacoes e ocorrencias.
+- Tabela de evolucao de peso e altura/comprimento.
 - Linha do tempo compartilhada.
 - Identificacao de quem registrou cada cuidado.
 - Filtros por data e categoria.
@@ -40,6 +46,7 @@ antonella_app_v2/
 ├─ styles.css
 ├─ app.js
 ├─ config.js
+├─ growth-reference.js
 ├─ manifest.json
 ├─ sw.js
 ├─ icon.svg
@@ -96,7 +103,7 @@ window.ANTONELLA_CONFIG = {
   supabasePublishableKey: "SUA-CHAVE-PUBLICA",
   authRedirectUrl: "https://SEU-USUARIO.github.io/SEU-REPOSITORIO/",
   inactivityMinutes: 30,
-  appVersion: "2.0.0",
+  appVersion: "2.1.0",
   familyDisplayName: "Maria Antonella"
 };
 ```
@@ -209,9 +216,19 @@ A imagem `anime-ui-concept.jpg` fica como referencia visual do conceito de inter
 - calendario de vacinas;
 - relatorio em PDF;
 - lembrete de proxima mamadeira;
-- historico de crescimento (peso/altura);
+- ampliar as curvas de crescimento automaticamente para 2 a 5 anos;
 - exportacao e backup dos registros.
 
 # GitHub Pages
 
 Este projeto foi preparado para publicacao como site estatico/PWA no GitHub Pages. Configure o Supabase em `config.js` usando apenas a Project URL e a chave publica/publishable. Nunca publique `service_role`.
+
+
+## Crescimento: uso seguro
+
+A tela de crescimento e um recurso de acompanhamento familiar, nao um calculador de dieta.
+Nesta versao, o app compara peso por idade e comprimento por idade com as tabelas simplificadas da OMS para meninas de 0 a 24 meses. A faixa P3-P97 e exibida apenas como referencia.
+
+O app **nao deve dizer que uma crianca precisa emagrecer ou engordar**. Quando uma medida fica fora da faixa exibida, a orientacao da interface e levar o historico para avaliacao da pediatra. O pediatra considera a curva ao longo do tempo, medidas anteriores, nascimento, alimentacao, exame clinico e outros fatores.
+
+Para menores de 2 anos, a OMS usa principalmente **comprimento medido deitado** nas curvas de comprimento por idade.

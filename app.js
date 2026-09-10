@@ -1,4 +1,5 @@
 import "./config.js";
+import { WHO_GIRLS_GROWTH_0_24 } from "./growth-reference.js";
 
 const config = window.ANTONELLA_CONFIG || {};
 
@@ -67,6 +68,28 @@ const CATEGORIES = {
     fields: [
       ["bathType", "Tipo de banho", "text", "Ex.: banho completo"],
       ["temperature", "Temperatura (opcional)", "text", "Ex.: 37\u00b0C"]
+    ]
+  },
+  crescimento: {
+    label: "Crescimento",
+    icon: "\ud83d\udccf",
+    subtitle: "Peso, altura e evolu\u00e7\u00e3o",
+    storageCategory: "observacao",
+    recordType: "crescimento",
+    fields: [
+      ["weightKg", "Peso (kg)", "number", "Ex.: 9,20", { step: "0.01", min: "0.5", max: "40", inputmode: "decimal" }],
+      ["heightCm", "Altura/comprimento (cm)", "number", "Ex.: 75,2", { step: "0.1", min: "30", max: "130", inputmode: "decimal" }]
+    ]
+  },
+  ocorrencia: {
+    label: "Ocorr\u00eancia",
+    icon: "\ud83d\udcdd",
+    subtitle: "Coc\u00f4, febre, sono, v\u00f4mito e outros",
+    storageCategory: "observacao",
+    recordType: "ocorrencia",
+    fields: [
+      ["occurrenceType", "Tipo", "text", "Ex.: Evacua\u00e7\u00e3o, febre, sono..."],
+      ["detail", "O que aconteceu?", "text", "Ex.: Hoje a Antonella n\u00e3o fez coc\u00f4"]
     ]
   },
   observacao: {
@@ -270,6 +293,16 @@ function createDemoStore() {
         authorId: "demo-mae",
         authorName: "M\u00e3e",
         authorRole: "mae"
+      },
+      {
+        id: uid("demo"),
+        category: "observacao",
+        when: at(18, 20),
+        fields: { recordType: "ocorrencia", occurrenceType: "Evacua\u00e7\u00e3o", detail: "Hoje n\u00e3o fez coc\u00f4" },
+        notes: "",
+        authorId: "demo-pai",
+        authorName: "Pai",
+        authorRole: "pai"
       }
     ]
   };
@@ -608,10 +641,146 @@ function showAuth() {
   $("#authView").classList.remove("hidden");
 }
 
+function effectiveCategory(entry) {
+  if (entry?.category === "observacao" && entry?.fields?.recordType === "crescimento") return "crescimento";
+  if (entry?.category === "observacao" && entry?.fields?.recordType === "ocorrencia") return "ocorrencia";
+  return entry?.category || "observacao";
+}
+
+function parseDecimal(value) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+function ageMonthsAt(birthDate, atDate = new Date()) {
+  if (!birthDate) return null;
+  const birth = new Date(`${birthDate}T12:00:00`);
+  const at = atDate instanceof Date ? atDate : new Date(atDate);
+  if (Number.isNaN(birth.getTime()) || Number.isNaN(at.getTime()) || at < birth) return null;
+  return (at.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.4375);
+}
+
+function displayAgeMonths(months) {
+  if (months == null || !Number.isFinite(months)) return "-";
+  const rounded = Math.max(0, Math.floor(months));
+  if (rounded < 12) return `${rounded} ${rounded === 1 ? "m\u00eas" : "meses"}`;
+  const years = Math.floor(rounded / 12);
+  const rest = rounded % 12;
+  return rest ? `${years}a ${rest}m` : `${years} ${years === 1 ? "ano" : "anos"}`;
+}
+
+function referenceRowForAge(months) {
+  if (months == null || !Number.isFinite(months)) return null;
+  const month = Math.round(months);
+  if (month < 0 || month > 24) return null;
+  return WHO_GIRLS_GROWTH_0_24[month] || null;
+}
+
+function classifyReference(value, ref) {
+  if (value == null || !ref) return { label: "Sem refer\u00eancia", tone: "neutral" };
+  if (value < ref.p3) return { label: "Abaixo do P3", tone: "watch" };
+  if (value > ref.p97) return { label: "Acima do P97", tone: "watch" };
+  return { label: "Dentro da faixa P3-P97", tone: "ok" };
+}
+
+function nearestMedianMonth(value, metric) {
+  if (value == null || !Number.isFinite(value)) return null;
+  let best = null;
+  for (const row of WHO_GIRLS_GROWTH_0_24) {
+    const median = metric === "weight" ? row.weight.median : row.length.median;
+    const distance = Math.abs(value - median);
+    if (!best || distance < best.distance) best = { month: row.month, distance };
+  }
+  return best?.month ?? null;
+}
+
+function growthEntries() {
+  return state.entries
+    .filter((entry) => effectiveCategory(entry) === "crescimento")
+    .sort((a, b) => new Date(a.when) - new Date(b.when));
+}
+
+function latestGrowthEntry() {
+  return [...growthEntries()].sort((a, b) => new Date(b.when) - new Date(a.when))[0] || null;
+}
+
+function growthAssessment(entry) {
+  if (!entry) return null;
+  const weight = parseDecimal(entry.fields?.weightKg);
+  const height = parseDecimal(entry.fields?.heightCm);
+  const months = ageMonthsAt(state.family?.birthDate, new Date(entry.when));
+  const ref = referenceRowForAge(months);
+  const weightStatus = classifyReference(weight, ref?.weight);
+  const heightStatus = classifyReference(height, ref?.length);
+  const weightEquivalent = nearestMedianMonth(weight, "weight");
+  const heightEquivalent = nearestMedianMonth(height, "length");
+  const values = [weightEquivalent, heightEquivalent].filter((value) => value != null);
+  const averageEquivalent = values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : null;
+  return { weight, height, months, ref, weightStatus, heightStatus, weightEquivalent, heightEquivalent, averageEquivalent };
+}
+
+function renderGrowth() {
+  const currentMonths = ageMonthsAt(state.family?.birthDate, new Date());
+  const latest = latestGrowthEntry();
+  const assessment = growthAssessment(latest);
+
+  $("#growthCurrentAge").textContent = currentMonths == null ? "Cadastre a data de nascimento" : displayAgeMonths(currentMonths);
+  $("#growthLatestWeight").textContent = assessment?.weight != null ? `${assessment.weight.toFixed(2).replace(".", ",")} kg` : "Sem medi\u00e7\u00e3o";
+  $("#growthLatestHeight").textContent = assessment?.height != null ? `${assessment.height.toFixed(1).replace(".", ",")} cm` : "Sem medi\u00e7\u00e3o";
+  $("#growthWeightStatus").textContent = assessment?.ref ? assessment.weightStatus.label : "";
+  $("#growthHeightStatus").textContent = assessment?.ref ? assessment.heightStatus.label : "";
+
+  if (assessment?.averageEquivalent != null) {
+    $("#growthReferenceAge").textContent = `~ ${assessment.averageEquivalent} meses`;
+    $("#growthReferenceDetail").textContent = `Peso ~${assessment.weightEquivalent ?? "-"}m \u00b7 Altura ~${assessment.heightEquivalent ?? "-"}m`;
+  } else {
+    $("#growthReferenceAge").textContent = "-";
+    $("#growthReferenceDetail").textContent = "Comparada \u00e0s medianas da OMS.";
+  }
+
+  const message = $("#growthMessage");
+  message.className = "growth-message neutral";
+  if (!latest) {
+    message.textContent = "Registre peso e altura para acompanhar a evolu\u00e7\u00e3o.";
+  } else if (assessment?.months == null) {
+    message.textContent = "Cadastre a data de nascimento para comparar a medi\u00e7\u00e3o com a faixa de refer\u00eancia por idade.";
+  } else if (!assessment?.ref) {
+    message.textContent = "Nesta vers\u00e3o, a compara\u00e7\u00e3o autom\u00e1tica da OMS cobre meninas de 0 a 24 meses.";
+  } else {
+    const outside = assessment.weightStatus.tone === "watch" || assessment.heightStatus.tone === "watch";
+    message.className = `growth-message ${outside ? "watch" : "ok"}`;
+    message.textContent = outside
+      ? "Uma das medidas ficou fora da faixa P3-P97 para a idade. Use o hist\u00f3rico para acompanhar a tend\u00eancia e leve os dados \u00e0 pediatra; o app n\u00e3o indica dieta, ganho ou perda de peso."
+      : "Peso e altura est\u00e3o entre P3 e P97 para a idade nesta refer\u00eancia da OMS. O mais importante \u00e9 acompanhar a curva ao longo do tempo com a pediatra.";
+  }
+
+  const body = $("#growthTableBody");
+  const rows = growthEntries().slice().reverse();
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="7" class="growth-empty">Nenhuma medi\u00e7\u00e3o registrada.</td></tr>`;
+    return;
+  }
+  body.innerHTML = rows.map((entry) => {
+    const a = growthAssessment(entry);
+    const refText = a?.averageEquivalent != null ? `~${a.averageEquivalent}m` : "-";
+    return `<tr>
+      <td>${escapeHtml(new Intl.DateTimeFormat("pt-BR").format(new Date(entry.when)))}</td>
+      <td>${escapeHtml(displayAgeMonths(a?.months))}</td>
+      <td>${a?.weight != null ? `${escapeHtml(a.weight.toFixed(2).replace(".", ","))} kg` : "-"}</td>
+      <td>${a?.height != null ? `${escapeHtml(a.height.toFixed(1).replace(".", ","))} cm` : "-"}</td>
+      <td><span class="growth-pill ${a?.weightStatus?.tone || "neutral"}">${escapeHtml(a?.ref ? a.weightStatus.label : "-")}</span></td>
+      <td><span class="growth-pill ${a?.heightStatus?.tone || "neutral"}">${escapeHtml(a?.ref ? a.heightStatus.label : "-")}</span></td>
+      <td>${escapeHtml(refText)}</td>
+    </tr>`;
+  }).join("");
+}
+
 function renderAll() {
   if (!state.currentUser || !state.family) return;
   renderHeader();
   renderSummary();
+  renderGrowth();
   renderTimeline();
   renderFamily();
 }
@@ -639,7 +808,7 @@ function firstName(name) {
 }
 
 function entriesByCategory(category) {
-  return state.entries.filter((entry) => entry.category === category);
+  return state.entries.filter((entry) => effectiveCategory(entry) === category);
 }
 
 function renderSummary() {
@@ -690,7 +859,7 @@ function renderQuickGrid() {
 
 function entryDescription(entry) {
   const f = entry.fields || {};
-  switch (entry.category) {
+  switch (effectiveCategory(entry)) {
     case "mamadeira": return [f.amount ? `${f.amount} ml` : "", f.milkType].filter(Boolean).join(" \u00b7 ") || entry.notes || "Mamadeira registrada";
     case "refeicao": return [f.meal, f.foods].filter(Boolean).join(" \u00b7 ") || entry.notes || "Refei\u00e7\u00e3o registrada";
     case "rejeicao": return [f.item, f.reaction].filter(Boolean).join(" \u00b7 ") || entry.notes || "Rejei\u00e7\u00e3o registrada";
@@ -698,6 +867,8 @@ function entryDescription(entry) {
     case "vacina": return [f.vaccine, f.dose].filter(Boolean).join(" \u00b7 ") || entry.notes || "Vacina registrada";
     case "remedio": return [f.medicine, f.dosage].filter(Boolean).join(" \u00b7 ") || entry.notes || "Rem\u00e9dio registrado";
     case "banho": return [f.bathType, f.temperature].filter(Boolean).join(" \u00b7 ") || entry.notes || "Banho registrado";
+    case "crescimento": return [f.weightKg ? `${f.weightKg} kg` : "", f.heightCm ? `${f.heightCm} cm` : ""].filter(Boolean).join(" \u00b7 ") || entry.notes || "Medi\u00e7\u00e3o registrada";
+    case "ocorrencia": return [f.occurrenceType, f.detail].filter(Boolean).join(" \u00b7 ") || entry.notes || "Ocorr\u00eancia registrada";
     case "observacao": return [f.subject, f.detail].filter(Boolean).join(" \u00b7 ") || entry.notes || "Observa\u00e7\u00e3o registrada";
     default: return entry.notes || "Registro";
   }
@@ -709,7 +880,7 @@ function renderTimeline() {
   const category = $("#categoryFilter").value;
   const filtered = [...state.entries]
     .filter((entry) => !date || localDateKey(new Date(entry.when)) === date)
-    .filter((entry) => category === "all" || entry.category === category)
+    .filter((entry) => category === "all" || effectiveCategory(entry) === category)
     .sort((a, b) => new Date(b.when) - new Date(a.when));
 
   if (!filtered.length) {
@@ -719,7 +890,7 @@ function renderTimeline() {
 
   timeline.innerHTML = "";
   filtered.forEach((entry) => {
-    const categoryInfo = CATEGORIES[entry.category] || CATEGORIES.observacao;
+    const categoryInfo = CATEGORIES[effectiveCategory(entry)] || CATEGORIES.observacao;
     const item = document.createElement("article");
     item.className = "timeline-item";
     item.tabIndex = 0;
@@ -759,58 +930,78 @@ function openEntryDialog(categoryKey) {
   $("#entryNotes").value = "";
   const fieldsWrap = $("#entryFields");
   fieldsWrap.innerHTML = "";
-  category.fields.forEach(([name, label, type, placeholder]) => {
+  category.fields.forEach(([name, label, type, placeholder, options = {}]) => {
     const labelEl = document.createElement("label");
-    labelEl.innerHTML = `<span>${escapeHtml(label)}</span><input data-field="${escapeHtml(name)}" type="${escapeHtml(type)}" placeholder="${escapeHtml(placeholder)}" />`;
+    const attrs = Object.entries(options).map(([key, value]) => ` ${escapeHtml(key)}="${escapeHtml(value)}"`).join("");
+    labelEl.innerHTML = `<span>${escapeHtml(label)}</span><input data-field="${escapeHtml(name)}" type="${escapeHtml(type)}" placeholder="${escapeHtml(placeholder)}"${attrs} />`;
     fieldsWrap.appendChild(labelEl);
   });
   $("#entryDialog").showModal();
 }
 
-async function saveEntry(event) {
-  event.preventDefault();
-  const category = event.currentTarget.dataset.category;
-  if (!CATEGORIES[category]) return;
-  const whenValue = $("#entryWhen").value;
-  if (!whenValue) return;
-  const fields = {};
-  $$('[data-field]', $("#entryFields")).forEach((input) => {
-    fields[input.dataset.field] = input.value.trim();
-  });
+async function persistEntryRecord(categoryKey, when, fields, notes = "") {
+  const categoryInfo = CATEGORIES[categoryKey];
+  if (!categoryInfo) throw new Error("INVALID_CATEGORY");
+  const storedFields = { ...fields };
+  if (categoryInfo.recordType) storedFields.recordType = categoryInfo.recordType;
   const entry = {
-    category,
-    when: new Date(whenValue).toISOString(),
-    fields,
-    notes: $("#entryNotes").value.trim(),
+    category: categoryInfo.storageCategory || categoryKey,
+    when: when instanceof Date ? when.toISOString() : new Date(when).toISOString(),
+    fields: storedFields,
+    notes: String(notes || "").trim(),
     authorId: state.currentUser.id,
     authorName: state.currentUser.displayName || ROLE_LABEL[state.currentUser.role] || "Respons\u00e1vel",
     authorRole: state.currentUser.role,
     createdAt: new Date().toISOString()
   };
 
-  try {
-    if (state.mode === "online") {
-      const { error } = await state.supabase.from("family_entries").insert({
-        family_id: state.family.id,
-        category: entry.category,
-        happened_at: entry.when,
-        fields: entry.fields,
-        notes: entry.notes || null,
-        author_id: entry.authorId,
-        author_name: entry.authorName,
-        author_role: entry.authorRole
-      });
-      if (error) throw error;
-      await refreshEntries();
-    } else {
-      entry.id = uid("entry");
-      state.localStore.entries.push(entry);
-      state.entries = state.localStore.entries;
-      persistDemoStore();
-      renderAll();
+  if (state.mode === "online") {
+    const { error } = await state.supabase.from("family_entries").insert({
+      family_id: state.family.id,
+      category: entry.category,
+      happened_at: entry.when,
+      fields: entry.fields,
+      notes: entry.notes || null,
+      author_id: entry.authorId,
+      author_name: entry.authorName,
+      author_role: entry.authorRole
+    });
+    if (error) throw error;
+    await refreshEntries();
+  } else {
+    entry.id = uid("entry");
+    state.localStore.entries.push(entry);
+    state.entries = state.localStore.entries;
+    persistDemoStore();
+    renderAll();
+  }
+  return entry;
+}
+
+async function saveEntry(event) {
+  event.preventDefault();
+  const categoryKey = event.currentTarget.dataset.category;
+  if (!CATEGORIES[categoryKey]) return;
+  const whenValue = $("#entryWhen").value;
+  if (!whenValue) return;
+  const fields = {};
+  $$('[data-field]', $("#entryFields")).forEach((input) => {
+    fields[input.dataset.field] = input.value.trim();
+  });
+
+  if (categoryKey === "crescimento") {
+    const weight = parseDecimal(fields.weightKg);
+    const height = parseDecimal(fields.heightCm);
+    if (weight == null && height == null) {
+      showToast("Informe pelo menos o peso ou a altura.");
+      return;
     }
+  }
+
+  try {
+    await persistEntryRecord(categoryKey, new Date(whenValue), fields, $("#entryNotes").value);
     $("#entryDialog").close();
-    showToast(`${CATEGORIES[category].label} registrado com sucesso.`);
+    showToast(`${CATEGORIES[categoryKey].label} registrado com sucesso.`);
   } catch (error) {
     console.error(error);
     showToast("N\u00e3o foi poss\u00edvel salvar o registro.");
@@ -864,6 +1055,9 @@ async function saveProfile(event) {
 function openBabyProfile() {
   $("#babyNameInput").value = state.family.babyName || "Maria Antonella";
   $("#babyBirthInput").value = state.family.birthDate || "";
+  const latestGrowth = growthAssessment(latestGrowthEntry());
+  $("#babyWeightInput").value = latestGrowth?.weight ?? "";
+  $("#babyHeightInput").value = latestGrowth?.height ?? "";
   $("#babyPreview").src = imageSrc(state.family.babyPhoto, "assets/anime-baby.jpg");
   $("#familyCodeDisplay").value = state.family.code || "";
   $("#babyPhotoInput").value = "";
@@ -878,6 +1072,13 @@ async function saveBabyProfile(event) {
   };
   const file = $("#babyPhotoInput").files[0];
   if (file) updates.babyPhoto = await resizeImage(file, 640, 0.76);
+
+  const requestedWeight = parseDecimal($("#babyWeightInput").value);
+  const requestedHeight = parseDecimal($("#babyHeightInput").value);
+  const latest = growthAssessment(latestGrowthEntry());
+  const measurementChanged =
+    (requestedWeight != null && Math.abs(requestedWeight - (latest?.weight ?? -999)) > 0.001) ||
+    (requestedHeight != null && Math.abs(requestedHeight - (latest?.height ?? -999)) > 0.001);
 
   try {
     if (state.mode === "online") {
@@ -896,8 +1097,16 @@ async function saveBabyProfile(event) {
       persistDemoStore();
       renderAll();
     }
+
+    if (measurementChanged) {
+      const fields = {};
+      if (requestedWeight != null) fields.weightKg = String(requestedWeight);
+      if (requestedHeight != null) fields.heightCm = String(requestedHeight);
+      await persistEntryRecord("crescimento", new Date(), fields, "Medi\u00e7\u00e3o atualizada pelo perfil do beb\u00ea.");
+    }
+
     $("#babyDialog").close();
-    showToast("Dados do beb\u00ea atualizados.");
+    showToast(measurementChanged ? "Dados e nova medi\u00e7\u00e3o salvos." : "Dados do beb\u00ea atualizados.");
   } catch (error) {
     console.error(error);
     showToast("N\u00e3o foi poss\u00edvel atualizar os dados.");
@@ -933,7 +1142,7 @@ function openDetail(id) {
   const entry = state.entries.find((item) => item.id === id);
   if (!entry) return;
   state.selectedEntryId = id;
-  const category = CATEGORIES[entry.category] || CATEGORIES.observacao;
+  const category = CATEGORIES[effectiveCategory(entry)] || CATEGORIES.observacao;
   $("#detailTitle").textContent = category.label;
   const labels = Object.fromEntries((category.fields || []).map(([name, label]) => [name, label]));
   const rows = [
@@ -1107,6 +1316,8 @@ function wireEvents() {
     if (nav === "family") openFamily();
     if (nav === "profile") openProfile();
   }));
+
+  $("#addGrowthButton").addEventListener("click", () => openEntryDialog("crescimento"));
 
   $("#addFloating").addEventListener("click", () => {
     $("#quickGrid").scrollIntoView({ behavior: "smooth", block: "center" });

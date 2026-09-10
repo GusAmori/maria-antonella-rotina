@@ -376,12 +376,54 @@ input:focus, select:focus, textarea:focus { border-color: #c8898e; box-shadow: 0
 .toast { position: fixed; top: 18px; left: 50%; transform: translate(-50%, -20px); z-index: 100; background: #2f2827; color: #fff; padding: 11px 16px; border-radius: 999px; font-size: 12px; font-weight: 750; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; box-shadow: 0 12px 28px rgba(0,0,0,.18); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+
+/* Crescimento */
+.growth-block {
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 22px;
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 14px 40px rgba(83,63,55,.06);
+}
+.growth-heading { align-items: center; }
+.growth-overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.growth-stat {
+  min-height: 112px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  background: #fff;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+}
+.growth-stat.highlight { background: linear-gradient(135deg, #fff0f2, #fff8f1); }
+.growth-stat span { color: var(--muted); font-size: 11px; font-weight: 800; }
+.growth-stat strong { font-family: Georgia, "Times New Roman", serif; font-size: 21px; line-height: 1.1; }
+.growth-stat small { color: var(--muted); font-size: 10px; line-height: 1.35; min-height: 14px; }
+.growth-message { margin-top: 12px; border-radius: 16px; padding: 13px 15px; font-size: 12px; line-height: 1.5; border: 1px solid var(--line); }
+.growth-message.neutral { background: #f7f1ed; color: #6c5e59; }
+.growth-message.ok { background: #eaf4ef; color: #456a5d; border-color: #cfe2d9; }
+.growth-message.watch { background: #fff4e7; color: #805b2b; border-color: #ecd9ba; }
+.growth-table-wrap { margin-top: 14px; overflow-x: auto; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+.growth-table { width: 100%; min-width: 850px; border-collapse: collapse; }
+.growth-table th, .growth-table td { padding: 12px 13px; text-align: left; border-bottom: 1px solid #efe6e1; font-size: 11px; white-space: nowrap; }
+.growth-table th { background: #faf5f1; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.growth-table tbody tr:last-child td { border-bottom: 0; }
+.growth-empty { text-align: center !important; color: var(--muted); padding: 24px !important; }
+.growth-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 8px; font-size: 9px; font-weight: 850; }
+.growth-pill.ok { background: #e7f3ed; color: #456a5d; }
+.growth-pill.watch { background: #fff0dd; color: #805b2b; }
+.growth-pill.neutral { background: #f0ebe7; color: var(--muted); }
+.growth-disclaimer { margin: 11px 2px 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.baby-measure-grid { grid-template-columns: 1fr 1fr; margin-bottom: 10px; }
 @media (max-width: 920px) {
   .auth-shell { grid-template-columns: 1fr; }
   .auth-hero { min-height: 42vh; }
   .auth-panel { min-height: auto; padding: 30px 22px 40px; }
   .auth-hero-copy { bottom: 24px; }
   .summary-grid { grid-template-columns: 1fr 1fr; }
+  .growth-overview { grid-template-columns: 1fr 1fr; }
   .quick-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -413,6 +455,13 @@ input:focus, select:focus, textarea:focus { border-color: #c8898e; box-shadow: 0
   .summary-icon { width: 36px; height: 36px; border-radius: 12px; font-size: 17px; }
   .summary-card strong { font-size: 12px; }
   .section-block { margin-top: 24px; }
+  .growth-block { padding: 15px; border-radius: 22px; }
+  .growth-heading { align-items: flex-start; }
+  .growth-heading .soft-btn { flex: 0 0 auto; padding: 10px 11px; font-size: 11px; }
+  .growth-overview { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .growth-stat { min-height: 104px; padding: 13px; border-radius: 17px; }
+  .growth-stat strong { font-size: 18px; }
+  .baby-measure-grid { grid-template-columns: 1fr; }
   .section-heading h3, .sheet-header h3 { font-size: 23px; }
   .quick-grid { gap: 8px; }
   .quick-card { min-height: 126px; padding: 14px; border-radius: 19px; }

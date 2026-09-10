@@ -1,10 +1,11 @@
-const CACHE_NAME = "antonella-v2.0.0";
+const CACHE_NAME = "antonella-v2.1.0";
 const APP_ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./config.js",
+  "./growth-reference.js",
   "./manifest.json",
   "./icon.svg",
   "./assets/anime-family.jpg",

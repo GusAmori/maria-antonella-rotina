@@ -167,6 +167,63 @@
         </article>
       </section>
 
+      <section id="growthSection" class="section-block growth-block">
+        <div class="section-heading growth-heading">
+          <div>
+            <span class="section-kicker">Crescimento</span>
+            <h3>Evolu&ccedil;&atilde;o da Antonella</h3>
+          </div>
+          <button id="addGrowthButton" class="soft-btn" type="button">+ Nova medi&ccedil;&atilde;o</button>
+        </div>
+
+        <div class="growth-overview">
+          <article class="growth-stat">
+            <span>Idade cronol&oacute;gica</span>
+            <strong id="growthCurrentAge">Cadastre a data de nascimento</strong>
+          </article>
+          <article class="growth-stat">
+            <span>&Uacute;ltimo peso</span>
+            <strong id="growthLatestWeight">Sem medi&ccedil;&atilde;o</strong>
+            <small id="growthWeightStatus"></small>
+          </article>
+          <article class="growth-stat">
+            <span>&Uacute;ltima altura/comprimento</span>
+            <strong id="growthLatestHeight">Sem medi&ccedil;&atilde;o</strong>
+            <small id="growthHeightStatus"></small>
+          </article>
+          <article class="growth-stat highlight">
+            <span>Idade de refer&ecirc;ncia aproximada</span>
+            <strong id="growthReferenceAge">-</strong>
+            <small id="growthReferenceDetail">Comparada &agrave;s medianas da OMS.</small>
+          </article>
+        </div>
+
+        <div id="growthMessage" class="growth-message neutral">
+          Registre peso e altura para acompanhar a evolu&ccedil;&atilde;o.
+        </div>
+
+        <div class="growth-table-wrap">
+          <table class="growth-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Idade</th>
+                <th>Peso</th>
+                <th>Altura</th>
+                <th>Peso/idade</th>
+                <th>Altura/idade</th>
+                <th>Refer&ecirc;ncia</th>
+              </tr>
+            </thead>
+            <tbody id="growthTableBody"></tbody>
+          </table>
+        </div>
+        <p class="growth-disclaimer">
+          Refer&ecirc;ncia informativa: curvas de crescimento da OMS para meninas de 0 a 24 meses (P3 a P97).
+          O aplicativo n&atilde;o recomenda ganho ou perda de peso e n&atilde;o substitui a avalia&ccedil;&atilde;o da pediatra.
+        </p>
+      </section>
+
       <section class="section-block">
         <div class="section-heading">
           <div>
@@ -194,6 +251,8 @@
               <option value="vacina">Vacinas</option>
               <option value="remedio">Rem&eacute;dios</option>
               <option value="banho">Banhos</option>
+              <option value="crescimento">Crescimento</option>
+              <option value="ocorrencia">Ocorr&ecirc;ncias</option>
               <option value="observacao">Observa&ccedil;&otilde;es</option>
             </select>
           </div>
@@ -292,6 +351,17 @@
         <span>Data de nascimento</span>
         <input id="babyBirthInput" type="date" />
       </label>
+      <div class="two-col baby-measure-grid">
+        <label>
+          <span>Peso atual (kg)</span>
+          <input id="babyWeightInput" type="number" min="0.5" max="40" step="0.01" inputmode="decimal" placeholder="Ex.: 9,20" />
+        </label>
+        <label>
+          <span>Altura/comprimento atual (cm)</span>
+          <input id="babyHeightInput" type="number" min="30" max="130" step="0.1" inputmode="decimal" placeholder="Ex.: 75,2" />
+        </label>
+      </div>
+      <p class="form-hint">Ao alterar peso ou altura, o app cria uma nova medi&ccedil;&atilde;o na tabela de evolu&ccedil;&atilde;o.</p>
       <label>
         <span>C&oacute;digo da fam&iacute;lia</span>
         <div class="copy-row">
