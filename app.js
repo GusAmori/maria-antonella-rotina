@@ -77,8 +77,8 @@ const CATEGORIES = {
     storageCategory: "observacao",
     recordType: "crescimento",
     fields: [
-      ["weightKg", "Peso (kg)", "number", "Ex.: 9,20", { step: "0.01", min: "0.5", max: "40", inputmode: "decimal" }],
-      ["heightCm", "Altura/comprimento (cm)", "number", "Ex.: 75,2", { step: "0.1", min: "30", max: "130", inputmode: "decimal" }]
+      ["weightKg", "Peso (kg)", "text", "Ex.: 9,20", { inputmode: "decimal", autocomplete: "off" }],
+      ["heightCm", "Altura/comprimento (cm)", "text", "Ex.: 75,2", { inputmode: "decimal", autocomplete: "off" }]
     ]
   },
   ocorrencia: {
@@ -653,12 +653,43 @@ function parseDecimal(value) {
   return Number.isFinite(number) ? number : null;
 }
 
-function ageMonthsAt(birthDate, atDate = new Date()) {
+function calendarAgeParts(birthDate, atDate = new Date()) {
   if (!birthDate) return null;
-  const birth = new Date(`${birthDate}T12:00:00`);
-  const at = atDate instanceof Date ? atDate : new Date(atDate);
-  if (Number.isNaN(birth.getTime()) || Number.isNaN(at.getTime()) || at < birth) return null;
-  return (at.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.4375);
+  const parts = String(birthDate).split("-").map(Number);
+  if (parts.length !== 3 || parts.some((value) => !Number.isFinite(value))) return null;
+  const [year, month, day] = parts;
+  const birth = new Date(year, month - 1, day, 12, 0, 0);
+  const atRaw = atDate instanceof Date ? atDate : new Date(atDate);
+  if (Number.isNaN(birth.getTime()) || Number.isNaN(atRaw.getTime()) || atRaw < birth) return null;
+  const at = new Date(atRaw.getFullYear(), atRaw.getMonth(), atRaw.getDate(), 12, 0, 0);
+
+  let years = at.getFullYear() - birth.getFullYear();
+  let months = at.getMonth() - birth.getMonth();
+  if (at.getDate() < birth.getDate()) months -= 1;
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  if (years < 0) return null;
+  const totalMonths = years * 12 + months;
+  return { years, months, totalMonths };
+}
+
+function ageMonthsAt(birthDate, atDate = new Date()) {
+  const age = calendarAgeParts(birthDate, atDate);
+  return age?.totalMonths ?? null;
+}
+
+function displayAgeDetailedFromDate(birthDate, atDate = new Date()) {
+  const age = calendarAgeParts(birthDate, atDate);
+  if (!age) return "Data de nascimento n\u00e3o cadastrada";
+  if (age.years > 0) {
+    const yearText = `${age.years} ${age.years === 1 ? "ano" : "anos"}`;
+    const monthText = `${age.months} ${age.months === 1 ? "m\u00eas" : "meses"}`;
+    return `${yearText} e ${monthText}`;
+  }
+  if (age.months > 0) return `${age.months} ${age.months === 1 ? "m\u00eas" : "meses"}`;
+  return "menos de 1 m\u00eas";
 }
 
 function displayAgeMonths(months) {
@@ -725,7 +756,9 @@ function renderGrowth() {
   const latest = latestGrowthEntry();
   const assessment = growthAssessment(latest);
 
-  $("#growthCurrentAge").textContent = currentMonths == null ? "Cadastre a data de nascimento" : displayAgeMonths(currentMonths);
+  $("#growthCurrentAge").textContent = currentMonths == null
+    ? "Cadastre a data de nascimento"
+    : displayAgeDetailedFromDate(state.family?.birthDate, new Date());
   $("#growthLatestWeight").textContent = assessment?.weight != null ? `${assessment.weight.toFixed(2).replace(".", ",")} kg` : "Sem medi\u00e7\u00e3o";
   $("#growthLatestHeight").textContent = assessment?.height != null ? `${assessment.height.toFixed(1).replace(".", ",")} cm` : "Sem medi\u00e7\u00e3o";
   $("#growthWeightStatus").textContent = assessment?.ref ? assessment.weightStatus.label : "";
@@ -789,6 +822,9 @@ function renderHeader() {
   $("#headerBabyName").textContent = state.family.babyName || "Maria Antonella";
   $("#headerBabyPhoto").src = imageSrc(state.family.babyPhoto, "assets/anime-baby.jpg");
   $("#heroBabyPhoto").src = imageSrc(state.family.babyPhoto, "assets/anime-baby.jpg");
+  const ageText = displayAgeDetailedFromDate(state.family.birthDate, new Date());
+  if ($("#headerBabyAge")) $("#headerBabyAge").textContent = ageText;
+  if ($("#heroBabyAge")) $("#heroBabyAge").textContent = state.family.birthDate ? `Idade: ${ageText}` : ageText;
   $("#profileName").textContent = state.currentUser.displayName || ROLE_LABEL[state.currentUser.role] || "Respons\u00e1vel";
   $("#profileRole").textContent = ROLE_LABEL[state.currentUser.role] || "Respons\u00e1vel";
   applyAvatar($("#profileAvatar"), state.currentUser);
@@ -919,13 +955,24 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function showAppDialog(dialog) {
+  if (!dialog) return;
+  if (typeof dialog.showModal === "function") {
+    if (!dialog.open) dialog.showModal();
+    return;
+  }
+  dialog.setAttribute("open", "");
+  dialog.classList.add("dialog-fallback-open");
+}
+
 function openEntryDialog(categoryKey) {
   const category = CATEGORIES[categoryKey];
   if (!category) return;
   const form = $("#entryForm");
+  if (!form) return;
   form.dataset.category = categoryKey;
   $("#entryTitle").textContent = category.label;
-  $("#entryEyebrow").textContent = "Novo registro";
+  $("#entryEyebrow").textContent = categoryKey === "crescimento" ? "Nova medi\u00e7\u00e3o" : "Novo registro";
   $("#entryWhen").value = toLocalInputValue();
   $("#entryNotes").value = "";
   const fieldsWrap = $("#entryFields");
@@ -936,7 +983,11 @@ function openEntryDialog(categoryKey) {
     labelEl.innerHTML = `<span>${escapeHtml(label)}</span><input data-field="${escapeHtml(name)}" type="${escapeHtml(type)}" placeholder="${escapeHtml(placeholder)}"${attrs} />`;
     fieldsWrap.appendChild(labelEl);
   });
-  $("#entryDialog").showModal();
+  showAppDialog($("#entryDialog"));
+  requestAnimationFrame(() => {
+    const firstField = $("[data-field]", fieldsWrap);
+    firstField?.focus({ preventScroll: true });
+  });
 }
 
 async function persistEntryRecord(categoryKey, when, fields, notes = "") {
@@ -996,6 +1047,16 @@ async function saveEntry(event) {
       showToast("Informe pelo menos o peso ou a altura.");
       return;
     }
+    if (weight != null && (weight < 0.5 || weight > 40)) {
+      showToast("Confira o peso informado.");
+      return;
+    }
+    if (height != null && (height < 30 || height > 130)) {
+      showToast("Confira a altura/comprimento informado.");
+      return;
+    }
+    if (weight != null) fields.weightKg = String(weight);
+    if (height != null) fields.heightCm = String(height);
   }
 
   try {
@@ -1052,16 +1113,27 @@ async function saveProfile(event) {
   }
 }
 
+function updateBabyAgePreview() {
+  const input = $("#babyBirthInput");
+  const preview = $("#babyAgePreview");
+  if (!input || !preview) return;
+  const birthDate = input.value;
+  preview.textContent = birthDate
+    ? `Idade atual: ${displayAgeDetailedFromDate(birthDate, new Date())}`
+    : "Informe a data de nascimento para calcular a idade automaticamente.";
+}
+
 function openBabyProfile() {
   $("#babyNameInput").value = state.family.babyName || "Maria Antonella";
   $("#babyBirthInput").value = state.family.birthDate || "";
   const latestGrowth = growthAssessment(latestGrowthEntry());
-  $("#babyWeightInput").value = latestGrowth?.weight ?? "";
-  $("#babyHeightInput").value = latestGrowth?.height ?? "";
+  $("#babyWeightInput").value = latestGrowth?.weight != null ? String(latestGrowth.weight).replace(".", ",") : "";
+  $("#babyHeightInput").value = latestGrowth?.height != null ? String(latestGrowth.height).replace(".", ",") : "";
   $("#babyPreview").src = imageSrc(state.family.babyPhoto, "assets/anime-baby.jpg");
   $("#familyCodeDisplay").value = state.family.code || "";
   $("#babyPhotoInput").value = "";
-  $("#babyDialog").showModal();
+  updateBabyAgePreview();
+  showAppDialog($("#babyDialog"));
 }
 
 async function saveBabyProfile(event) {
@@ -1075,6 +1147,14 @@ async function saveBabyProfile(event) {
 
   const requestedWeight = parseDecimal($("#babyWeightInput").value);
   const requestedHeight = parseDecimal($("#babyHeightInput").value);
+  if (requestedWeight != null && (requestedWeight < 0.5 || requestedWeight > 40)) {
+    showToast("Confira o peso informado.");
+    return;
+  }
+  if (requestedHeight != null && (requestedHeight < 30 || requestedHeight > 130)) {
+    showToast("Confira a altura/comprimento informado.");
+    return;
+  }
   const latest = growthAssessment(latestGrowthEntry());
   const measurementChanged =
     (requestedWeight != null && Math.abs(requestedWeight - (latest?.weight ?? -999)) > 0.001) ||
@@ -1205,7 +1285,10 @@ async function logout() {
 
 function closeDialogById(id) {
   const dialog = document.getElementById(id);
-  if (dialog?.open) dialog.close();
+  if (!dialog) return;
+  if (dialog.open && typeof dialog.close === "function") dialog.close();
+  dialog.removeAttribute("open");
+  dialog.classList.remove("dialog-fallback-open");
 }
 
 function setAuthTab(tab) {
@@ -1317,7 +1400,17 @@ function wireEvents() {
     if (nav === "profile") openProfile();
   }));
 
-  $("#addGrowthButton").addEventListener("click", () => openEntryDialog("crescimento"));
+  $("#addGrowthButton")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    openEntryDialog("crescimento");
+  });
+  $("#addMeasurementFromProfile")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    closeDialogById("babyDialog");
+    setTimeout(() => openEntryDialog("crescimento"), 80);
+  });
+  $("#babyBirthInput")?.addEventListener("change", updateBabyAgePreview);
+  $("#babyBirthInput")?.addEventListener("input", updateBabyAgePreview);
 
   $("#addFloating").addEventListener("click", () => {
     $("#quickGrid").scrollIntoView({ behavior: "smooth", block: "center" });

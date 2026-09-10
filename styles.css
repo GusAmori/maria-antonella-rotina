@@ -485,3 +485,50 @@ input:focus, select:focus, textarea:focus { border-color: #c8898e; box-shadow: 0
   .welcome-card h2 { max-width: 76%; font-size: 28px; }
   .summary-grid { grid-template-columns: 1fr; }
 }
+
+/* v2.1.1 - idade detalhada e medicao */
+.baby-age-inline {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 10px !important;
+  color: var(--rose-dark) !important;
+}
+.age-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 12px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.68);
+  border: 1px solid rgba(139,76,85,.12);
+  color: var(--rose-dark);
+  font-size: 12px;
+  font-weight: 800;
+}
+.baby-age-panel {
+  margin: -2px 0 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--rose-soft);
+  color: var(--rose-dark);
+  font-size: 12px;
+  font-weight: 800;
+}
+.growth-add-btn {
+  position: relative;
+  z-index: 2;
+  touch-action: manipulation;
+}
+.measurement-shortcut {
+  margin: 2px 0 14px;
+}
+.dialog-fallback-open {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+@media (max-width: 640px) {
+  .baby-age-inline { font-size: 9px !important; }
+  .age-badge { margin-top: 9px; font-size: 11px; padding: 6px 9px; }
+}

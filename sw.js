@@ -1,4 +1,4 @@
-const CACHE_NAME = "antonella-v2.1.0";
+const CACHE_NAME = "antonella-v2.1.1";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -15,13 +15,16 @@ const APP_ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_ASSETS)));
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener("fetch", (event) => {

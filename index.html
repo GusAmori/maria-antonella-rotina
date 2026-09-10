@@ -7,7 +7,7 @@
   <meta name="description" content="Rotina compartilhada da Maria Antonella para mae e pai." />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="assets/anime-baby.jpg" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2.1.1" />
   <title>Antonella - Rotina em Familia</title>
 </head>
 <body>
@@ -121,6 +121,7 @@
           <span>
             <small>Rotina de</small>
             <strong id="headerBabyName">Maria Antonella</strong>
+            <small id="headerBabyAge" class="baby-age-inline">Idade n&atilde;o cadastrada</small>
           </span>
         </button>
       </div>
@@ -142,6 +143,7 @@
           <div id="todayLabel" class="eyebrow dark">Hoje</div>
           <h2 id="welcomeTitle">Tudo da Antonella em um s&oacute; lugar.</h2>
           <p id="welcomeSubtitle">Registre um cuidado e ele aparece para os dois respons&aacute;veis.</p>
+          <div id="heroBabyAge" class="age-badge">Data de nascimento n&atilde;o cadastrada</div>
         </div>
         <div class="baby-portrait-wrap">
           <img id="heroBabyPhoto" src="assets/anime-baby.jpg" alt="Maria Antonella" class="baby-portrait" />
@@ -173,7 +175,7 @@
             <span class="section-kicker">Crescimento</span>
             <h3>Evolu&ccedil;&atilde;o da Antonella</h3>
           </div>
-          <button id="addGrowthButton" class="soft-btn" type="button">+ Nova medi&ccedil;&atilde;o</button>
+          <button id="addGrowthButton" class="soft-btn growth-add-btn" type="button">+ Peso / altura</button>
         </div>
 
         <div class="growth-overview">
@@ -351,17 +353,19 @@
         <span>Data de nascimento</span>
         <input id="babyBirthInput" type="date" />
       </label>
+      <div id="babyAgePreview" class="baby-age-panel">Informe a data de nascimento para calcular a idade automaticamente.</div>
       <div class="two-col baby-measure-grid">
         <label>
           <span>Peso atual (kg)</span>
-          <input id="babyWeightInput" type="number" min="0.5" max="40" step="0.01" inputmode="decimal" placeholder="Ex.: 9,20" />
+          <input id="babyWeightInput" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex.: 9,20" />
         </label>
         <label>
           <span>Altura/comprimento atual (cm)</span>
-          <input id="babyHeightInput" type="number" min="30" max="130" step="0.1" inputmode="decimal" placeholder="Ex.: 75,2" />
+          <input id="babyHeightInput" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex.: 75,2" />
         </label>
       </div>
-      <p class="form-hint">Ao alterar peso ou altura, o app cria uma nova medi&ccedil;&atilde;o na tabela de evolu&ccedil;&atilde;o.</p>
+      <p class="form-hint">Ao alterar peso ou altura e salvar, o app cria uma nova medi&ccedil;&atilde;o na tabela de evolu&ccedil;&atilde;o.</p>
+      <button id="addMeasurementFromProfile" type="button" class="soft-btn full measurement-shortcut">Registrar nova medi&ccedil;&atilde;o com data e hora</button>
       <label>
         <span>C&oacute;digo da fam&iacute;lia</span>
         <div class="copy-row">
@@ -414,6 +418,6 @@
     </div>
   </dialog>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=2.1.1"></script>
 </body>
 </html>
