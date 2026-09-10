@@ -1,0 +1,17 @@
+{
+  "name": "Antonella - Rotina em Familia",
+  "short_name": "Antonella",
+  "description": "Rotina compartilhada da Maria Antonella para mae e pai.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fff7f5",
+  "theme_color": "#f7dfe5",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
